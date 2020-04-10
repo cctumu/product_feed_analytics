@@ -64,10 +64,10 @@ def _data_transformation(df_extracted):
 
 def _data_output(df_transformed):
     df_transformed = df_transformed.sort_values(['diff_rate_cat'], ascending=True)
-    df_transformed.to_csv("data_analysis_hb_cat_rate.csv")
+    df_transformed.to_csv("output/data_analysis_hb_cat_rate.csv")
 
     df_transformed = df_transformed.sort_values(['diff_rate'], ascending=True)
-    df_transformed.to_csv("data_analysis_hb_title_rate.csv")
+    df_transformed.to_csv("output/data_analysis_hb_title_rate.csv")
 
 
 def main():
