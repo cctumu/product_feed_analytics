@@ -12,8 +12,14 @@ import numpy as np
 inflect_engine = inflect.engine()
 
 
-# partial matching function
 def partial_match(x, y):
+    """
+    Fuzzy partial matching function for 2 strings.
+
+    :param x: string 1 to be matched
+    :param y: string 2 to be matched
+    :return: matching rate
+    """
     return fuzz.partial_ratio(x, y)
 
 
@@ -27,12 +33,24 @@ def _data_loading():
 
 
 def _data_extraction(df):
+    """
+    Extracting data.
+
+    :param df: input dataframe
+    :return: extracted dataframe
+    """
     df_extracted = df[['link', 'google_product_category', 'title', 'product_type']].copy()
     df_extracted.dropna(axis=0, how='any', inplace=True)
     return df_extracted
 
 
 def filter_nouns(row: str):
+    """
+    Filter nouns from a string.
+
+    :param row: string to be filtered
+    :return: filtered string
+    """
     punctuations = '?:!.,;>&^%$#'
     row_words = nltk.word_tokenize(row)
     return ' '.join(
@@ -41,6 +59,12 @@ def filter_nouns(row: str):
 
 
 def convert_cat(row: str):
+    """
+    Filter nouns from a string without first cat.
+
+    :param row: string to be filtered
+    :return: filtered string
+    """
     punctuations = '?:!.,;>&^%$#'
     row_words = nltk.word_tokenize(row)
     return ' '.join(
@@ -49,6 +73,12 @@ def convert_cat(row: str):
 
 
 def _data_transformation(df_extracted):
+    """
+    Generating fuzzy partial matching rates for (category vs title) & (category vs title).
+
+    :param df_extracted: extracted dataframe
+    :return: transformed dataframe
+    """
     df_transformed = df_extracted
     df_transformed['title_nouns'] = df_transformed['title'].copy().apply(filter_nouns)
     df_transformed['google_product_category_convert'] = \
@@ -63,6 +93,11 @@ def _data_transformation(df_extracted):
 
 
 def _data_output(df_transformed):
+    """
+    Sort dataframe by partial matching rates and output to csv.
+
+    :param df_transformed: dataframe transformed
+    """
     df_transformed = df_transformed.sort_values(['diff_rate_cat'], ascending=True)
     df_transformed.to_csv("output/data_analysis_hb_cat_rate.csv")
 
