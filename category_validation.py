@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import os
 
 import inflect
 import nltk
@@ -7,6 +8,37 @@ import pandas as pd
 from nltk.corpus import wordnet as wn
 from fuzzywuzzy import fuzz
 import numpy as np
+import logging
+
+
+def set_logger():
+    # create logger
+    log = logging.getLogger('my_app')
+    log.setLevel(logging.DEBUG)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    log.addHandler(ch)
+
+    # 'application' code
+    # log.debug('debug message')
+    # log.info('info message')
+    # log.warning('warn message')
+    # log.error('error message')
+    # log.critical('critical message')
+    return log
+
+logger = set_logger()
+
 
 # Correctly generate plurals, singular nouns, ordinals, indefinite articles; convert numbers to words
 inflect_engine = inflect.engine()
@@ -98,11 +130,20 @@ def _data_output(df_transformed):
 
     :param df_transformed: dataframe transformed
     """
+    output_dir = 'output_data'
+    output_file_title = f"{output_dir}\\data_analysis_hb_title_rate.csv"
+    output_file_cat = f"{output_dir}\\data_analysis_hb_cat_rate.csv"
+    output_path = os.getcwd()
+
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     df_transformed = df_transformed.sort_values(['diff_rate_cat'], ascending=True)
-    df_transformed.to_csv("output/data_analysis_hb_cat_rate.csv")
+    df_transformed.to_csv(output_file_cat)
 
     df_transformed = df_transformed.sort_values(['diff_rate'], ascending=True)
-    df_transformed.to_csv("output/data_analysis_hb_title_rate.csv")
+    df_transformed.to_csv(output_file_title)
+
+    logger.info(f'Output to {output_path}\\{output_file_cat} and {output_path}\\{output_file_title}.')
 
 
 def main():
