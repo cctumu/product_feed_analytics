@@ -86,8 +86,8 @@ def _data_extraction(df):
     :param df: input dataframe
     :return: extracted dataframe
     """
-    df_extracted = df[['mpn', 'link', 'google_product_category', 'title', 'product_type']].copy()
-    df_extracted.columns = ['sku_id', 'link', 'product_category', 'title', 'product_type']
+    df_extracted = df[['mpn', 'item_group_id', 'link', 'google_product_category', 'title', 'product_type']].copy()
+    df_extracted.columns = ['sku_id', 'item_group_id', 'link', 'product_category', 'title', 'product_type']
     df_extracted.dropna(axis=0, how='any', inplace=True)
 
     df_extracted = _join_google_category(df_extracted)
