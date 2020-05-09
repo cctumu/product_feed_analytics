@@ -10,6 +10,21 @@ from fuzzywuzzy import fuzz
 import numpy as np
 import logging
 
+align_product_category_hb = {
+    'Home & Garden > Household Supplies > Waste Containment > Rubbish Bins & Waste Paper Baskets': 'Home & Garden > Household Supplies > Waste Containment > Trash Cans & Wastebaskets',
+    'Home & Garden > Household Supplies > Storage & Organisation': 'Home & Garden > Household Supplies > Storage & Organization',
+    'Home & Garden > Linens & Bedding > Towels > Bath Towels & Flannels': 'Home & Garden > Linens & Bedding > Towels > Bath Towels & Washcloths',
+    'Clothing & Accessories > Clothing > Nightwear & Loungewear > Robes': 'Apparel & Accessories > Clothing > Sleepwear & Loungewear > Robes',
+    'Home & Garden > Kitchen & Dining > Tableware > Coffee & Tea Pots': 'Home & Garden > Kitchen & Dining > Tableware > Coffee Servers & Tea Pots',
+    'Home & Garden > Linens & Bedding > Table Linen': 'Home & Garden > Linens & Bedding > Table Linens',
+    'Home & Garden > Kitchen & Dining > Tableware > Cutlery': 'Home & Garden > Kitchen & Dining > Tableware > Flatware',
+    'Home & Garden > Linen > Table Linen > Placemats': 'Home & Garden > Linens & Bedding > Table Linens > Placemats',
+    'Furniture > Cabinets & Storage > Cupboards & Wardrobes': 'Furniture > Cabinets & Storage > Armoires & Wardrobes',
+    'Home & Garden > Decor > Artwork > Posters, Prints & Visual Artwork': 'Home & Garden > Decor > Artwork > Posters, Prints, & Visual Artwork',
+    'Furniture > Benches > Storage Benches': 'Furniture > Benches > Storage & Entryway Benches',
+    'Home & Garden > Linens & Bedding > Bedding > Quilts & Duvets': 'Home & Garden > Linens & Bedding > Bedding > Quilts & Comforters'
+}
+
 
 def set_logger():
     # create logger
@@ -37,8 +52,8 @@ def set_logger():
     # log.critical('critical message')
     return log
 
-logger = set_logger()
 
+logger = set_logger()
 
 # Correctly generate plurals, singular nouns, ordinals, indefinite articles; convert numbers to words
 inflect_engine = inflect.engine()
@@ -71,9 +86,40 @@ def _data_extraction(df):
     :param df: input dataframe
     :return: extracted dataframe
     """
-    df_extracted = df[['link', 'google_product_category', 'title', 'product_type']].copy()
+    df_extracted = df[['mpn', 'link', 'google_product_category', 'title', 'product_type']].copy()
+    df_extracted.columns = ['sku_id', 'link', 'product_category', 'title', 'product_type']
     df_extracted.dropna(axis=0, how='any', inplace=True)
+
+    df_extracted = _join_google_category(df_extracted)
     return df_extracted
+
+
+def __read_google_product_category():
+    file_path = f'data/Google_Product_Category.csv'
+
+    df = pd.read_csv(file_path, delimiter=',', dtype=str, header=None,
+                     names=['product_category_id', "col1", "col2", "col3", "col4", "col5", "col6", "col7"])
+
+    df["product_category"] = df.apply(
+        lambda row:
+        ' > '.join(
+            [v for v in [row['col1'], row['col2'], row['col3'], row['col4'], row['col5'], row['col6'], row['col7']] if
+             v is not np.nan]), axis=1)
+
+    # print(df)
+
+    return df[['product_category_id', 'product_category']]
+
+
+def _join_google_category(df_converted):
+    for k, v in align_product_category_hb.items():
+        df_converted["product_category"] = df_converted.apply(
+            lambda row: v if (row["product_category"] == k) else row["product_category"], axis=1)
+
+    df_converted = df_converted.merge(__read_google_product_category(),
+                                      on=['product_category'], how='left')
+
+    return df_converted
 
 
 def filter_nouns(row: str):
@@ -113,14 +159,14 @@ def _data_transformation(df_extracted):
     """
     df_transformed = df_extracted
     df_transformed['title_nouns'] = df_transformed['title'].copy().apply(filter_nouns)
-    df_transformed['google_product_category_convert'] = \
-        df_transformed['google_product_category'].copy().apply(convert_cat)
+    df_transformed['product_category_convert'] = \
+        df_transformed['product_category'].copy().apply(convert_cat)
     df_transformed['product_type_convert'] = df_transformed['product_type'].copy().apply(convert_cat)
     df_transformed.dropna(axis=0, how='any', inplace=True)
     df_transformed['diff_rate'] = df_transformed.apply(
-        lambda x: partial_match_vector(x['google_product_category_convert'], x['title_nouns']), axis=1)
+        lambda x: partial_match_vector(x['product_category_convert'], x['title_nouns']), axis=1)
     df_transformed['diff_rate_cat'] = df_transformed.apply(
-        lambda x: partial_match_vector(x['google_product_category_convert'], x['product_type_convert']), axis=1)
+        lambda x: partial_match_vector(x['product_category_convert'], x['product_type_convert']), axis=1)
     return df_transformed
 
 
@@ -131,17 +177,17 @@ def _data_output(df_transformed):
     :param df_transformed: dataframe transformed
     """
     output_dir = 'output_data'
-    output_file_title = f"{output_dir}\\data_analysis_hb_title_rate.csv"
-    output_file_cat = f"{output_dir}\\data_analysis_hb_cat_rate.csv"
+    output_file_title = f"{output_dir}/data_analysis_hb_title_rate.csv"
+    output_file_cat = f"{output_dir}/data_analysis_hb_cat_rate.csv"
     output_path = os.getcwd()
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
     df_transformed = df_transformed.sort_values(['diff_rate_cat'], ascending=True)
-    df_transformed.to_csv(output_file_cat)
+    df_transformed.to_csv(output_file_cat, index=False)
 
     df_transformed = df_transformed.sort_values(['diff_rate'], ascending=True)
-    df_transformed.to_csv(output_file_title)
+    df_transformed.to_csv(output_file_title, index=False)
 
     logger.info(f'Output to {output_path}\\{output_file_cat} and {output_path}\\{output_file_title}.')
 
